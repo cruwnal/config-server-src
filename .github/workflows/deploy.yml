@@ -1,0 +1,57 @@
+name: Deploy Config Server
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Build with Maven
+        run: mvn clean package -DskipTests
+
+      - name: Prepare VPS Folders
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: 72.61.249.10
+          username: root
+          key: ${{ secrets.SSH_KEY }}
+          script: mkdir -p ~/apps/config-server
+
+      - name: Copy JAR to VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: 72.61.249.10
+          username: root
+          key: ${{ secrets.SSH_KEY }}
+          source: "target/*.jar"
+          target: "~/apps/config-server"
+          strip_components: 1
+
+      - name: Start Config Server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: 72.61.249.10
+          username: root
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            # Kill any process running on port 8888 (Config Server port)
+            fuser -k 8888/tcp || true
+            
+            # Export the Git Token so the JAR can see it
+            export GIT_TOKEN="${{ secrets.GIT_TOKEN }}"
+            
+            # Run the JAR in the background
+            nohup java -jar ~/apps/config-server/*.jar > ~/apps/config-server/log.txt 2>&1 &
