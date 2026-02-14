@@ -1,0 +1,29 @@
+server:
+  port: 8888
+
+spring:
+  application:
+    name: swiftShopConfigServer
+  cloud:
+    config:
+      server:
+        git:
+          uri: https://github.com/cruwnal/SwiftShop-config-server.git
+          clone-on-start: true
+          default-label: main
+          username: ${GIT_USERNAME:cruwnal}
+          password: ${GIT_TOKEN}
+
+eureka:
+  client:
+    service-url:
+      # Use localhost since Eureka is on the same machine
+      defaultZone: http://localhost:8761/eureka/
+    register-with-eureka: true
+    fetch-registry: true
+  instance:
+    # IMPORTANT: Use the Public IP for the registration link in the Dashboard
+    prefer-ip-address: true
+    ip-address: 72.61.249.10
+    # This makes the clickable link in Eureka Dashboard work from your home PC
+    instance-id: ${spring.application.name}:${server.port}
